@@ -1,67 +1,115 @@
 import { useRef, useState } from 'react';
 import Webcam from "react-webcam";
+import RetinaVid from '../assets/retinaldetachfake.mp4';
+import RetinaImg from '../assets/RetinaDetachImg.png';
 
 const EyeDetect = () => {
   const webcamRef = useRef(null);
-  const [frame, setFrame] = useState(null);
+  const videoRef = useRef(null);
+  const [blurAmount, setBlurAmount] = useState('blur-sm');
+  const [isPlayingVid, setIsPlayingVid] = useState(true);
+  const [useCam, setUseCam] = useState(true);
 
   const captureImg = async () => {
-    if (webcamRef.current) {
-      const currentFrame = webcamRef.current.getScreenshot();
-      setFrame(currentFrame);
+    setIsPlayingVid(false);
+  };
+
+  const reset = async () => {
+    setBlurAmount('blur-sm');
+    setUseCam(true);
+    setIsPlayingVid(true);
+    if (videoRef.current) {
+      videoRef.current.pause();
+      videoRef.current.currentTime = 0;
+    }
+  };
+
+  const animate = async () => {
+    const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+    const blurDegrees = ['blur-md', 'blur-lg', 'blur-xl', 'blur-3xl'];
+    for (let i = 0; i < 4; i++) {
+      setBlurAmount(blurDegrees[i]);
+      await wait(70);
+    }
+    setUseCam(false);
+    for (let i = 0; i < 4; i++) {
+      setBlurAmount(blurDegrees[3 - i]);
+      await wait(70);
+    }
+    setBlurAmount('');
+    if (videoRef.current) {
+      videoRef.current.play();
     }
   };
 
   const videoConstraints = {
-    facingMode: "user",
+    facingMode: "environment",
   };
 
   return (
-    <div className="overflow-x-hidden w-full min-h-screen bg-gray-900 text-white font-sans">
-      {/* Wrapper container */}
-      <div className="flex flex-col items-center justify-between min-h-screen w-full">
-        {/* Header */}
-        <header className="w-full py-4 bg-gray-800 shadow-lg">
-          <h1 className="text-center text-2xl font-bold">Eye Detection</h1>
-        </header>
+    <div className="overflow-hidden w-full min-h-screen bg-gray-900 text-white font-sans flex flex-col">
+      {/* Header */}
+      <header className="w-full py-4 bg-gray-800 shadow-lg">
+        <h1 className="text-center text-xl sm:text-2xl font-bold">
+          Eye Disease Detection
+        </h1>
+      </header>
 
-        {/* Main Content */}
-        <main className="flex-grow flex flex-col items-center justify-center w-full">
-          {/* Webcam Container */}
-          <div className="relative w-full max-w-screen-sm h-64">
-            <div className="overflow-hidden w-full h-full">
-              <Webcam
-                ref={webcamRef}
-                className="w-full h-full shadow-lg transform scale-x-[-1]"
-                audio={false}
-                screenshotFormat="image/jpeg"
-                videoConstraints={videoConstraints}
-              />
-            </div>
-          </div>
+      {/* Main Content */}
+      <main className="flex-grow flex items-center justify-center w-full">
+        <div className="relative flex w-full max-w-md h-96 sm:h-[70vh] items-center justify-center">
+          {/* Dynamic Content */}
+          {useCam ? (
+            <Webcam
+              ref={webcamRef}
+              className={`w-full h-full shadow-lg transform filter ${blurAmount}`}
+              audio={false}
+              screenshotFormat="image/jpeg"
+              videoConstraints={videoConstraints}
+            />
+          ) : isPlayingVid ? (
+            <video
+              ref={videoRef}
+              src={RetinaVid}
+              muted
+              autoPlay
+              loop
+              playsInline
+              className={`w-full h-full shadow-lg transform filter ${blurAmount}`}
+            ></video>
+          ) : (
+            <img
+              src={RetinaImg}
+              className="flex justify-center items-center h-full shadow-lg transform filter"
+              alt="Retinal Detachment"
+            />
+          )}
+        </div>
+      </main>
 
-          {/* Controls */}
-          <div className="flex justify-center mt-6 space-x-4">
-            <button
-              onClick={captureImg}
-              className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg shadow focus:outline-none focus:ring focus:ring-gray-500"
-            >
-              Capture
-            </button>
-            <button
-              onClick={() => setFrame(null)}
-              className="px-4 py-2 bg-red-600 hover:bg-red-500 rounded-lg shadow focus:outline-none focus:ring focus:ring-red-500"
-            >
-              Reset
-            </button>
-          </div>
-        </main>
-
-        {/* Footer */}
-        <footer className="w-full py-2 bg-gray-800 text-center text-sm text-gray-400">
-          <p>© 2025 EyeDetect. All rights reserved.</p>
-        </footer>
-      </div>
+      {/* Controls */}
+      <footer className="w-full bg-gray-800 py-3 fixed bottom-0">
+        <div className="flex justify-center space-x-3 px-4">
+          <button
+            onClick={captureImg}
+            className="px-4 py-2 bg-gray-700 hover:bg-gray-800 text-sm sm:text-base rounded-lg shadow focus:outline-none focus:ring focus:ring-gray-700"
+          >
+            Capture
+          </button>
+          <button
+            onClick={reset}
+            className="px-4 py-2 bg-blue-900 hover:bg-blue-950 text-sm sm:text-base rounded-lg shadow focus:outline-none focus:ring focus:ring-blue-900"
+          >
+            Reset
+          </button>
+          <button
+            onClick={animate}
+            className="px-4 py-2 bg-green-700 hover:bg-green-800 text-sm sm:text-base rounded-lg shadow focus:outline-none focus:ring focus:ring-green-700"
+          >
+            Animate
+          </button>
+        </div>
+      </footer>
     </div>
   );
 };
