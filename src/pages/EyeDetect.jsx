@@ -56,8 +56,8 @@ const EyeDetect = () => {
       </header>
 
       {/* Main Content */}
-      <main className="flex-grow flex items-center justify-center w-full">
-        <div className="relative flex w-full max-w-md h-96 sm:h-[70vh] items-center justify-center">
+      <main className="flex-grow flex justify-center w-full">
+        <div className="relative flex w-full max-w-md h-96 sm:h-full items-center justify-center mt-8">
           {/* Dynamic Content */}
           {useCam ? (
             <Webcam
