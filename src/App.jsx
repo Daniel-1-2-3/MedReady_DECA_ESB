@@ -26,7 +26,7 @@ function App() {
     createRoutesFromElements(
       <>
         <Route path="/" element={<Layout />}>
-          <Route index element={<Navigate to="/" />} />
+          <Route index element={<Navigate to="/eye_detect" />} />
           <Route path="eye_detect" element={<EyeDetect />} />
           <Route path="skin_detect" element={<SkinDetect />} />
         </Route>
