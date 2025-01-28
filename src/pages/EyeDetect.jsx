@@ -154,7 +154,7 @@ const EyeDetect = () => {
       )}
 
       {/* Header */}
-      <header className="py-4 bg-blue-950 shadow-lg shadow-gray-800">
+      <header className="py-4 bg-blue-950 shadow-lg shadow-gray-800 -mt-2">
         <h1 className="text-center text-xl sm:text-2xl font-bold">
           Eye Disease Detection
         </h1>

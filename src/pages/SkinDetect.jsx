@@ -1,28 +1,127 @@
 import { useRef, useState } from "react";
-import melanoma from "../assets/Melanoma.jpg"
 import Webcam from "react-webcam";
+import jpeg from "jpeg-js";
+import { Buffer } from 'buffer';
+import melanoma from "../assets/Melanoma.jpg"
+
+window.Buffer = Buffer;
 
 const SkinDetect = () => {
   const webcamRef = useRef(null);
   const [picTaken, setPicTaken] = useState(false);
+  const [analyzedImg, setAnalyzedImg] = useState(null);
+  const [frame, setFrame] = useState(null);
   const [showPopup, setShowPopup] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
 
   const captureImg = async () => {
     setPicTaken(true);
+    const img = webcamRef.current.getScreenshot();
+    setFrame(img);
   };
 
-  const analyzeImg = async () => {
-    setAnalyzing(true); // Show analyzing screen
-    setTimeout(() => {
-      setAnalyzing(false); // Hide analyzing screen
-      setShowPopup(true); // Show result popup
-    }, 2500); // Delay for 1.5 seconds
+  const scan = async () => {
+    try {
+      // Extract Base64 data and decode it
+      const base64Data = frame.slice(frame.indexOf(",") + 1);
+      const binaryString = atob(base64Data);
+      const binaryData = Uint8Array.from(binaryString, (char) => char.charCodeAt(0));
+  
+      // Decode the JPEG image using jpeg-js
+      const rawImageData = jpeg.decode(binaryData, { useTArray: true });
+  
+      const { width, height, data } = rawImageData;
+  
+      // Define bounding box sizes
+      const boxSizes = [90, 100, 110];
+  
+      let darkestBox = { x: 0, y: 0, size: 0, brightness: Infinity };
+  
+      // Scan for the darkest region with each box size
+      for (const boxSize of boxSizes) {
+        const blocksX = Math.floor(width / boxSize);
+        const blocksY = Math.floor(height / boxSize);
+  
+        for (let by = 0; by < blocksY; by++) {
+          for (let bx = 0; bx < blocksX; bx++) {
+            let totalBrightness = 0;
+            let pixelCount = 0;
+  
+            // Iterate over each pixel in the box
+            for (let y = by * boxSize; y < Math.min((by + 1) * boxSize, height); y++) {
+              for (let x = bx * boxSize; x < Math.min((bx + 1) * boxSize, width); x++) {
+                const index = (y * width + x) * 4; // Pixel index (RGBA)
+  
+                const r = data[index];
+                const g = data[index + 1];
+                const b = data[index + 2];
+  
+                const brightness = r + g + b;
+                totalBrightness += brightness;
+                pixelCount++;
+              }
+            }
+  
+            // Calculate average brightness for the box
+            const averageBrightness = totalBrightness / pixelCount;
+  
+            // Update darkest box if this one is darker
+            if (averageBrightness < darkestBox.brightness) {
+              darkestBox = { x: bx * boxSize, y: by * boxSize, size: boxSize, brightness: averageBrightness };
+            }
+          }
+        }
+      }
+  
+      // Draw the bounding box on the raw pixel data
+      for (let y = darkestBox.y; y < darkestBox.y + darkestBox.size; y++) {
+        for (let x = darkestBox.x; x < darkestBox.x + darkestBox.size; x++) {
+          const index = (y * width + x) * 4;
+  
+          // Draw a red border around the box
+          if (
+            y === darkestBox.y || // Top border
+            y === darkestBox.y + darkestBox.size - 1 || // Bottom border
+            x === darkestBox.x || // Left border
+            x === darkestBox.x + darkestBox.size - 1 // Right border
+          ) {
+            data[index] = 255; // Red
+            data[index + 1] = 0; // Green
+            data[index + 2] = 0; // Blue
+          }
+        }
+      }
+  
+      // Encode the modified image back to JPEG
+      const encodedImage = jpeg.encode({ data, width, height }, 90); // Quality set to 90
+  
+      // Convert the encoded data to Base64 without Buffer
+      const base64Image =
+        "data:image/jpeg;base64," +
+        btoa(String.fromCharCode(...encodedImage.data));
+  
+      setAnalyzedImg(base64Image)
+    } catch (error) {
+      console.error("Error processing the image:", error);
+    }
   };
+  const analyzeImg = async () => {
+    setAnalyzing(true); 
+    setTimeout(() => {
+      setAnalyzing(false); 
+      scan()
+      setShowPopup(true); 
+    }, 2500);
+  };
+
+  const reset = async () => {
+    setPicTaken(false);
+    setFrame(null);
+  }
 
   const videoConstraints = {
     facingMode: "environment",
-  };
+  };  
 
   return (
       <div className="flex flex-col bg-gray-900 text-white font-sans">
@@ -44,7 +143,7 @@ const SkinDetect = () => {
             <div className="bg-gray-800 text-white rounded-xl p-6 shadow-xl text-center w-5/6 max-w-md mt-96">
               <h2 className="text-xl font-bold mb-4">
                 <span className="bg-gradient-to-r from-red-500 via-red-600 to-red-700 text-white px-4 py-3 rounded-md shadow-xl shadow-red-950">
-                  Retinal Detachment
+                  Melanoma
                 </span>{" "}
                 <p className="mt-3">Found</p>
               </h2>
@@ -56,13 +155,10 @@ const SkinDetect = () => {
   
               {/* Fundus Image Frame */}
               <div
-                className="relative w-64 h-64 bg-black rounded-full mx-auto mb-6 mt-6 overflow-hidden"
-                style={{
-                  clipPath: "circle(50% at center)",
-                }}
+                className="relative w-64 h-64 bg-black  mx-auto mb-6 mt-6 overflow-hidden"
               >
                 <img
-                  src={melanoma}
+                  src={analyzedImg}
                   alt="Retinal Detachment"
                   style={{ filter: "saturate(0.65)" }}
                   className="w-full h-full object-cover transform scale-125"
@@ -97,28 +193,34 @@ const SkinDetect = () => {
           </div>
         )}
   
-        {/* Header */}
-        <header className="py-4 bg-blue-950 shadow-lg shadow-gray-800">
-          <h1 className="text-center text-xl sm:text-2xl font-bold">
-            Skin Disease Detection
-          </h1>
-        </header>
-  
         {/* Main Content */}
-        <main className="flex-grow flex flex-col justify-center w-full">
-          <div className="flex flex-col justify-center h-[50vh] w-full max-w-md bg-slate-900 p-4 my-5">
-                <Webcam
-                  ref={webcamRef}
-                  className={`w-full h-full shadow-lg filter transform scale-150`}
-                  audio={false}
-                  screenshotFormat="image/jpeg"
-                  videoConstraints={videoConstraints}
-                />
+        <main className="flex flex-col justify-center w-full -mt-2">
+          {/* Header */}
+          <header className="py-4 bg-blue-950 shadow-lg shadow-gray-800">
+            <h1 className="text-center text-xl sm:text-2xl font-bold">
+              Skin Disease Detection
+            </h1>
+          </header>
+          <div className="w-full max-w-md p-4 bg-gray-800 aspect-square overflow-hidden">
+            {!picTaken ? (
+              <Webcam
+                ref={webcamRef}
+                className="w-full h-full object-cover"
+                audio={false}
+                screenshotFormat="image/jpeg"
+                videoConstraints={videoConstraints}
+              />
+            ) : (
+              <img 
+                className="w-full h-full object-cover"
+                src={frame}
+              />
+            )}
           </div>
         </main>
   
         {/* Footer */}
-        <footer className="w-full bg-gray-800 py-3 rounded-md">
+        <footer className="w-full bg-gray-800 py-3 rounded-b-md">
           <div className="flex gap-3">
             {!picTaken ? (
               <button
@@ -136,7 +238,7 @@ const SkinDetect = () => {
               </button>
             )}
             <button
-              onClick={analyzeImg}
+              onClick={reset}
               className="px-4 py-2 bg-blue-900 hover:bg-blue-950 text-sm sm:text-base rounded-lg shadow focus:outline-none focus:ring focus:ring-blue-900"
             >
               Reset
