@@ -75,21 +75,21 @@ const SkinDetect = () => {
       croppedImg.forEach(({r, b, g}) => {
         switch (i) {
           case 0: // Blue - Melanoma
-            (b/(r + g + b) > 0.7) && count++
+            (b/(r + g + b) > 0.7 && (r > 100 || g > 100 || b > 100)) && count++
             if (count > 200) {
               detected = true
               setType('Melanoma')
             }
             break;
           case 1: // Green - Impetigo
-            (g/(r + g + b) > 0.7) && count++
+            (g/(r + g + b) > 0.7 && (r > 100 || g > 100 || b > 100)) && count++
             if (count > 200) {
               detected = true
               setType('Impetigo')
             }
             break;
           case 2: // Red - Mole
-            (r/(r + g + b) > 0.7) && count++
+            (r/(r + g + b) > 0.7 && (r > 100 || g > 100 || b > 100)) && count++
             if (count > 200) {
               detected = true
               setType('Mole')
@@ -115,6 +115,7 @@ const SkinDetect = () => {
   };
 
   const reset = async () => {
+    setType('None');
     setPicTaken(false);
     setFrame(null);
   }
@@ -136,63 +137,54 @@ const SkinDetect = () => {
           </div>
         </div>
       )}
-
+  
       {/* Popup */}
       {showPopup && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-80 text-white z-50 overflow-y-scroll">
-          <div className="bg-gray-800 text-white rounded-xl p-6 shadow-xl text-center w-5/6 max-w-md mt-96">
+        <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-80 text-white z-50 overflow-y-auto">
+          <div className="bg-gray-800 text-white rounded-xl p-6 shadow-xl text-center w-5/6 max-w-md top-6 max-h-[90vh] overflow-y-auto relative">
             <h2 className="text-xl font-bold mb-4">
-              {type!='None' ? (
-              <>
-              <span className="bg-gradient-to-r from-red-500 via-red-600 to-red-700 text-white px-4 py-3 rounded-md shadow-xl shadow-red-950">
-                {type}
-              </span>{" "}
-              <p className="mt-3">Found</p>
-              </>
+              {type !== 'None' ? (
+                <>
+                  <span className="bg-gradient-to-r from-red-500 via-red-600 to-red-700 text-white px-4 py-3 rounded-md shadow-xl shadow-red-950">
+                    {type}
+                  </span>
+                  <p className="mt-3">Found</p>
+                </>
               ) : (
                 <span className="bg-gradient-to-r from-green-500 via-green-600 to-green-700 text-white px-4 py-3 rounded-md shadow-xl shadow-green-950">
                   Healthy
                 </span>
               )}
             </h2>
-            {
-              type=='Melanoma' &&
-            <span
-              className="bg-gradient-to-r shadow-lg from-blue-500 via-blue-600 to-blue-700 text-white text-lg px-4 py-2 rounded-md shadow-gray-600 cursor-pointer transition-all duration-200 hover:bg-blue-600 hover:shadow-lg"
-            >
-              Click for Priority Treatment!
-            </span>
-            }
-
-            {/* Fundus Image Frame */}
-            <div
-              className="relative w-64 h-64 bg-black  mx-auto mb-6 mt-6 overflow-hidden"
-            >
+  
+            {type === 'Melanoma' && (
+              <span className="bg-gradient-to-r shadow-lg from-blue-500 via-blue-600 to-blue-700 text-white text-lg px-4 py-2 rounded-md shadow-gray-600 cursor-pointer transition-all duration-200 hover:bg-blue-600 hover:shadow-lg">
+                Click for Priority Treatment!
+              </span>
+            )}
+  
+            <div className="relative w-64 h-64 bg-black mx-auto mb-6 mt-6 overflow-hidden">
               <img
                 src={analyzedImg}
-                alt="Retinal Detachment"
+                alt="Skin Analysis"
                 style={{ filter: "saturate(0.65)" }}
                 className="w-full h-full object-cover transform scale-125"
               />
             </div>
-
+  
             <div className="bg-slate-950 bg-opacity-50 p-4 rounded-md">
               <p className="mb-4 text-left font-semibold text-gray-300">
                 {explanations[type]}
               </p>
-              <p className="mb-4 text-left text-gray-300">
-                {descriptions[type]}
-              </p>
+              <p className="mb-4 text-left text-gray-300">{descriptions[type]}</p>
               <p className="mb-6 text-left leading-relaxed text-gray-300">
-                <a
-                  className="text-blue-400 hover:text-blue-500 underline transition-all"
-                >
+                <a className="text-blue-400 hover:text-blue-500 underline transition-all">
                   More information here
                 </a>
               </p>
               <button
                 className="px-6 py-2 bg-blue-900 text-white rounded-xl shadow-lg transition-all duration-200"
-                onClick={() => setShowPopup(false)} // Close the popup
+                onClick={() => setShowPopup(false)}
               >
                 Close
               </button>
@@ -200,71 +192,82 @@ const SkinDetect = () => {
           </div>
         </div>
       )}
-
+  
       {/* Main Content */}
-      <main className="flex flex-col justify-center w-full -mt-2">
+      <main className="flex flex-col justify-center w-full -mt-2 bg-gray-800 pb-6">
         {/* Header */}
         <header className="py-4 bg-blue-950 shadow-lg shadow-gray-800">
           <h1 className="text-center text-xl sm:text-2xl font-bold">
             Skin Disease Detection
           </h1>
         </header>
-        <div className="relative w-full max-w-md p-4 bg-gray-800 aspect-square overflow-hidden">
+  
+        {/* Image/Video Container */}
+        <div className="relative w-80 h-80 bg-gray-800 mx-auto overflow-hidden mt-3">
           {!picTaken ? (
-            <div className="relative">
+            <div className="relative w-full h-full">
               <Webcam
                 ref={webcamRef}
-                className="w-full h-full object-cover"
+                className="absolute w-full h-full object-cover"
                 audio={false}
                 screenshotFormat="image/jpeg"
                 videoConstraints={videoConstraints}
               />
-              {/* ✅ Overlay Brackets */}
-              <div className="absolute inset-0 flex items-center justify-center">
-                {/* Top-Left Bracket */}
-                <div className="absolute top-10 left-16 w-10 h-10 border-t-4 border-l-4 border-slate-700"></div>
-                {/* Top-Right Bracket */}
-                <div className="absolute top-10 right-16 w-10 h-10 border-t-4 border-r-4 border-slate-700"></div>
-                {/* Bottom-Left Bracket */}
-                <div className="absolute bottom-10 left-16 w-10 h-10 border-b-4 border-l-4 border-slate-700"></div>
-                {/* Bottom-Right Bracket */}
-                <div className="absolute bottom-10 right-16 w-10 h-10 border-b-4 border-r-4 border-slate-700"></div>
+  
+              {/* Brackets */}
+              <div className="absolute inset-0 flex justify-between items-between">
+                <div className="absolute w-10 h-10 border-t-4 border-l-4 border-slate-500"
+                    style={{ top: "30%", left: "30%", transform: "translate(-50%, -50%)" }}>
+                </div>
+                <div className="absolute w-10 h-10 border-t-4 border-r-4 border-slate-500"
+                    style={{ top: "30%", right: "30%", transform: "translate(50%, -50%)" }}>
+                </div>
+                <div className="absolute w-10 h-10 border-b-4 border-l-4 border-slate-500"
+                    style={{ bottom: "30%", left: "30%", transform: "translate(-50%, 50%)" }}>
+                </div>
+                <div className="absolute w-10 h-10 border-b-4 border-r-4 border-slate-500"
+                    style={{ bottom: "30%", right: "30%", transform: "translate(50%, 50%)" }}>
+                </div>
               </div>
             </div>
           ) : (
-            <img className="w-full h-full object-cover" src={frame} />
+            <img
+              src={showPopup ? analyzedImg : frame}
+              className="absolute w-full h-full object-cover"
+              alt="Captured/Analyzed Image"
+            />
           )}
-        </div>  
-      </main>
-
-      {/* Footer */}
-      <footer className="w-full bg-gray-800 py-3 rounded-b-md">
-        <div className="flex gap-3">
-          {!picTaken ? (
-            <button
-              onClick={captureImg}
-              className="ml-20 px-4 py-2 bg-gray-700 hover:bg-gray-800 text-sm sm:text-base rounded-lg shadow focus:outline-none focus:ring focus:ring-gray-700"
-            >
-              Capture
-            </button>
-          ) : (
-            <button
-              onClick={analyzeImg}
-              className="ml-10 px-4 py-2 bg-purple-700 hover:bg-purple-800 text-sm sm:text-base rounded-lg shadow focus:outline-none focus:ring focus:ring-gray-700"
-            >
-              Analyze Image
-            </button>
-          )}
-          <button
-            onClick={reset}
-            className="px-4 py-2 bg-blue-900 hover:bg-blue-950 text-sm sm:text-base rounded-lg shadow focus:outline-none focus:ring focus:ring-blue-900"
-          >
-            Reset
-          </button>
         </div>
-      </footer>
+  
+        {/* Footer */}
+        <footer className="w-full bg-gray-800 py-4">
+          <div className="flex gap-3 justify-center">
+            {!picTaken ? (
+              <button
+                onClick={captureImg}
+                className="px-4 py-2 bg-gray-700 hover:bg-gray-800 text-sm sm:text-base rounded-lg shadow focus:outline-none focus:ring focus:ring-gray-700"
+              >
+                Capture
+              </button>
+            ) : (
+              <button
+                onClick={analyzeImg}
+                className="px-4 py-2 bg-purple-700 hover:bg-purple-800 text-sm sm:text-base rounded-lg shadow focus:outline-none focus:ring focus:ring-gray-700"
+              >
+                Analyze Image
+              </button>
+            )}
+            <button
+              onClick={reset}
+              className="px-4 py-2 bg-blue-900 hover:bg-blue-950 text-sm sm:text-base rounded-lg shadow focus:outline-none focus:ring focus:ring-blue-900"
+            >
+              Reset
+            </button>
+          </div>
+        </footer>
+      </main>
     </div>
   );
-}
+};  
 
 export default SkinDetect;
